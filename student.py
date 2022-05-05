@@ -23,13 +23,15 @@ class AnimalBaselineNet(nn.Module):
         super(AnimalBaselineNet, self).__init__()
         # TODO: Define layers of model architecture
         # TODO-BLOCK-BEGIN
-        self.conv1 = nn.Conv2d(3, 6, 3, 2, 1)
-        self.conv2 = nn.Conv2d(6, 12, 3, 2, 1)
-        self.conv3 = nn.Conv2d(12, 24, 3, 2, 1)
+        self.conv1 = nn.Conv2d(3, 6, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        self.conv2 = nn.Conv2d(6, 12, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        self.conv3 = nn.Conv2d(
+            12, 24, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)
+        )
 
         self.relu = nn.ReLU(inplace=False)
-        self.fc = nn.Linear(1536, 128)
-        self.cls = nn.Linear(128, 16)
+        self.fc = nn.Linear(1536, 128, bias=True)
+        self.cls = nn.Linear(128, 16, bias=True)
         # TODO-BLOCK-END
 
     def forward(self, x):
@@ -40,6 +42,7 @@ class AnimalBaselineNet(nn.Module):
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
+        x = x.view(x.size(0), -1)
         x = self.relu(self.fc(x))
         x = self.cls(x)
         # TODO-BLOCK-END
@@ -71,12 +74,24 @@ def model_train(net, inputs, labels, criterion, optimizer):
     """
     # TODO: Foward pass
     # TODO-BLOCK-BEGIN
+    running_loss = 0.0
+    num_correct = 0.0
+    total_images = 0.0
+
+    outputs = net(inputs)
+    loss = criterion(outputs, labels.squeeze())
+    _, preds = torch.max(outputs, 1)
+    running_loss += loss.item()
+    num_correct += torch.sum(preds == labels.data.reshape(-1))
+    total_images += labels.data.numpy().size
 
     # TODO-BLOCK-END
 
     # TODO: Backward pass
     # TODO-BLOCK-BEGIN
-
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
     # TODO-BLOCK-END
 
     return running_loss, num_correct, total_images
@@ -230,7 +245,8 @@ class HorizontalFlip(object):
 
         # TODO: Flip image
         # TODO-BLOCK-BEGIN
-
+        if random.random() < self.p:
+            image = cv2.flip(image, 1)
         # TODO-BLOCK-END
 
         return torch.Tensor(image)
