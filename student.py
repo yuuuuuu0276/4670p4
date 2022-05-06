@@ -130,7 +130,13 @@ class Shift(object):
         _, H, W = image.shape
         # TODO: Shift image
         # TODO-BLOCK-BEGIN
+        image = np.moveaxis(image, 0, -1)
+        x = random.uniform(-(self.max_shift), self.max_shift)
+        y = random.uniform(-(self.max_shift), self.max_shift)
 
+        transMx = np.float32([[1, 0, x], [0, 1, y]])
+        image = cv2.warpAffine(image, transMx, (W, H))
+        image = np.moveaxis(image, -1, 0)
         # TODO-BLOCK-END
 
         return torch.Tensor(image)
@@ -172,7 +178,11 @@ class Contrast(object):
 
         # TODO: Change image contrast
         # TODO-BLOCK-BEGIN
-
+        contrast = random.uniform(self.min_contrast, self.max_contrast)
+        a = contrast
+        b = 1 - contrast
+        mean = image.mean(axis=0)
+        image = a * image + b * mean
         # TODO-BLOCK-END
 
         return torch.Tensor(image)
@@ -210,7 +220,11 @@ class Rotate(object):
 
         # TODO: Rotate image
         # TODO-BLOCK-BEGIN
-
+        image = np.moveaxis(image, 0, -1)
+        angle = random.uniform(-self.max_angle, self.max_angle)
+        transMx = cv2.getRotationMatrix2D((W // 2, H // 2), angle, 1.0)
+        image = cv2.warpAffine(image, transMx, (W, H))
+        image = np.moveaxis(image, -1, 0)
         # TODO-BLOCK-END
 
         return torch.Tensor(image)
