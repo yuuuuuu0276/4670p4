@@ -183,6 +183,9 @@ class Contrast(object):
         b = 1 - contrast
         mean = image.mean(axis=0)
         image = a * image + b * mean
+        # from oh
+        image = np.minimum(image, 1)
+        image = np.maximum(image, 0)
         # TODO-BLOCK-END
 
         return torch.Tensor(image)
@@ -259,8 +262,10 @@ class HorizontalFlip(object):
 
         # TODO: Flip image
         # TODO-BLOCK-BEGIN
+        image = np.moveaxis(image, 0, -1)
         if random.random() < self.p:
             image = cv2.flip(image, 1)
+        image = np.moveaxis(image, -1, 0)
         # TODO-BLOCK-END
 
         return torch.Tensor(image)
@@ -353,6 +358,16 @@ def get_adversarial(img, output, label, net, criterion, epsilon):
 
     # TODO: Define forward pass
     # TODO-BLOCK-BEGIN
+    loss = criterion(output, label)
+    net.zero_grad()
+    loss.backward()
+
+    sign_data_grad = img.grad.data.sign()
+    noise = epsilon * sign_data_grad
+    # Create the perturbed image by adjusting each pixel of the input image
+    perturbed_image = img + noise
+    # Adding clipping to maintain [0,1] range
+    perturbed_image = torch.clamp(perturbed_image, 0, 1)
 
     # TODO-BLOCK-END
 
